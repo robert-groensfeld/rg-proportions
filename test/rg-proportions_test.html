@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, minimum-scale=1, initial-scale=1, user-scalable=yes">
+
+    <title>rg-proportions test</title>
+
+    <script src="../../webcomponentsjs/webcomponents-lite.js"></script>
+    <script src="../../web-component-tester/browser.js"></script>
+
+    <link rel="import" href="../rg-proportions.html">
+  </head>
+  <body>
+    <test-fixture id="proportions">
+      <template>
+        <rg-proportions>
+          <values>[1, 2, 1]</values>
+        </rg-proportions>
+      </template>
+    </test-fixture>
+
+    <test-fixture id="colors">
+      <rg-proportions colored>
+        <colors>['red', 'green', 'blue']</colors>
+      </rg-proportions>
+    </test-fixture>
+
+    <test-fixture id="legend">
+      <rg-proportions legend border>
+        <values>[1,1,1]</values>
+        <legend>['?% ?%', '?x Item', '?x Thing (?x is about ?%)']</legend>
+      </rg-proportions>
+    </test-fixture>
+
+    <script>
+      suite('rg-proportions', function() {
+        test('parses proportions correctly', function() {
+          var element = fixture('proportions');
+          [1, 2, 1].forEach(function(value, i) {
+            assert.equal(element._proportions[i], value);
+          });
+        });
+
+        test('calculates percentages correctly', function() {
+          var element = fixture('proportions');
+          [25, 50, 25].forEach(function(percentage, i) {
+            assert.equal(element._percentages[i], percentage);
+          });
+        });
+
+        test('parses colors correctly', function() {
+          var element = fixture('colors');
+          ['red', 'green', 'blue'].forEach(function(color, i) {
+            assert.equal(element._colors[i], color);
+          });
+        });
+
+        test('parses legend correctly', function() {
+          var element = fixture('legend');
+          ['33% 33%', '1 Item', '1 Thing (1 is about 33%)'].forEach(function(legend, i) {
+            assert.equal(element._legend[i], legend);
+          })
+        });
+      });
+    </script>
+  </body>
+</html>
