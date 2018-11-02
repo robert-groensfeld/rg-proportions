@@ -1,0 +1,299 @@
+<link rel="import" href="../polymer/polymer.html">
+
+<!--
+`rg-proportions`
+Displays proportions as a bar.
+
+@demo demo/index.html
+-->
+
+<dom-module id="rg-proportions">
+  <template>
+    <style>
+      :host {
+        display: block;
+      }
+
+      .bar {
+        /* Proportions form a bar taking up the whole width. */
+        display: inline-table;
+        width: 100%;
+      }
+
+      .proportion {
+        display: table-cell;
+        text-align: center;
+        vertical-align: middle;
+
+        /* Position the links over the corresponding proportions. */
+        position: relative;
+
+        /* Do not wrap captions. Important for removing captions that are too long. */
+        white-space: nowrap;
+      }
+
+      .link {
+        /* Fill the entire area of the proportion. */
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        /* Make the link hover over the caption. */
+        z-index: 1;
+      }
+    </style>
+
+    <div class="bar">
+      <template is="dom-repeat" items="[[proportions]]" as="proportion">
+        <div class="proportion" style="[[_getStyle(index)]]">
+          <template is="dom-if" if="[[_hasUrl(index)]]">
+            <a href="[[_getUrl(index)]]">
+              <!-- Make whole area of the proportion div clickable. -->
+              <span class="link"></span>
+            </a>
+          </template>
+
+          <template is="dom-if" if="[[_captions]]">[[_getCaption(index)]]</template>
+        </div>
+      </template>
+    </div>
+  </template>
+
+  <script>
+    Polymer({
+
+      is: 'rg-proportions',
+
+      properties: {
+        /** List of absolute proportions. */
+        proportions: Array,
+
+        /** Enables borders. */
+        border: {
+          type: Boolean,
+          value: false,
+        },
+
+        /**
+         * Path to a border image.
+         * The outer 3% of the image should contain the border.
+         * The background of the image should be transparent.
+         */
+        borderImage: String,
+
+        /** Background colors of the proportions. */
+        colors: Array,
+
+        /** Captions for proportions. */
+        captions: String,
+
+        /** List containing a description for every proportion. */
+        _captions: Array,
+
+        /** List of hyperlinks to make proportions clickable. */
+        links: {
+          type: Array,
+          value: [],
+        },
+
+        /** List of percentages calculated from absolute proportions. */
+        _percentages: Array,
+
+        /** Relative proportion widths. */
+        _relativeWidths: Array,
+
+        /**
+         * Incremented, whenever the attached callback is called.
+         * Used for observers that should run only after the element is attached.
+         */
+        _attached: Number,
+      },
+
+      observers: [
+        "_getPercentages(proportions)",
+        "_getRelativeWidths(_percentages)",
+        "_buildCaptions(proportions, _percentages, captions)",
+        "_removeLongCaptions(_captions, _percentages, _attached)",
+        "_drawBorder(borderImage, _attached)",
+        "_setBarHeight(_attached)",
+      ],
+
+      attached: function() {
+        if (this._attached)
+          this._attached += 1;
+        else
+          this._attached = 0;
+      },
+
+      /** Sets the bar height relative to the bar width. */
+      _setBarHeight: function(attached) {
+        var bounds = this.$$(".bar").getBoundingClientRect();
+        var width = bounds.width;
+        // Set bar height to 10% of the bar width.
+        var barHeight = 0.1 * width;
+        this.$$(".bar").style.height = barHeight + "px";
+      },
+
+      /** Draws a border from a border image around the components. */
+      _drawBorder: function(borderImage) {
+        var localDom = Polymer.dom(this.root);
+        var bar = this.$$(".bar");
+
+        // TODO: Find a better way than a static delay.
+        // Delay execution until bar and proportions have their final size.
+        window.setTimeout(function() {
+          var bounds = bar.getBoundingClientRect();
+          var barWidth = bounds.width;
+          // Set border width to 0.5% of the bar width so that small
+          // proportions do not become greater than 1% of the bar width.
+          var borderWidth = (0.5 / 100) * barWidth;
+
+          localDom.querySelectorAll(".proportion").forEach(function(proportion) {
+            // Enable borders, so that we can use the border image.
+            proportion.style.border = borderWidth + "px solid";
+            proportion.style.borderImage = "url(" + borderImage + ")";
+
+            // Assume the outer 3% of the border image are the border.
+            proportion.style.borderImageSlice = "3% 3% 3% 3%";
+
+            // Make sure that the link belonging to the proportion is clickable.
+            var link = Polymer.dom(proportion).querySelector(".link");
+            if (link) {
+              var width = proportion.getBoundingClientRect().width;
+              var height = proportion.getBoundingClientRect().height;
+              link.style.setProperty("top", -1 * borderWidth + "px");
+              link.style.setProperty("left", -1 * borderWidth + "px");
+              link.style.setProperty("width", width + "px");
+              link.style.setProperty("height", height + "px");
+            }
+          });
+        }, 100)
+      },
+
+      /** Removes captions that are too long for the cell representing the proportion. */
+      _removeLongCaptions: function(captions, percentages) {
+        // TODO: Find a better way than a static delay.
+        // Delay execution until proportions have their final size.
+        window.setTimeout(function() {
+          var proportions = Polymer.dom(this.root).querySelectorAll(".proportion");
+          var barWidth = this.$$(".bar").getBoundingClientRect().width;
+
+          proportions.forEach(function (proportion, i) {
+            var width = proportion.getBoundingClientRect().width;
+            // Add one percent to account for rounding imprecision.
+            var maxWidth = ((percentages[i] + 1) / 100) * barWidth;
+
+            if (width > maxWidth) {
+              var caption = captions[i];
+              this._removeCaption(proportion, caption);
+              proportion.setAttribute("title", caption);
+            }
+          }.bind(this));
+        }.bind(this), 100);
+      },
+
+      /** Removes the caption of a proportion. */
+      _removeCaption: function(proportion, caption) {
+        proportion.childNodes.forEach(function(child) {
+          if (child.textContent === caption)
+            proportion.removeChild(child);
+        });
+      },
+
+      /** Converts the absolute proportions to percentages. */
+      _getPercentages: function(proportions) {
+        var sum = proportions.reduce(function(sum, proportion) {
+          return sum + proportion;
+        }, 0);
+
+        this._percentages = proportions.map(function(proportion) {
+          return Math.round((proportion / sum) * 100);
+        });
+      },
+
+      /** Gets the relative proportion widths. */
+      _getRelativeWidths: function(percentages) {
+        // Count invisible proportions that take 0% of the bar width.
+        var zeroCount = percentages.reduce(function(count, percentage) {
+          return (percentage === 0)? (count + 1) : count;
+        }, 0);
+
+        var resizeFactor = (100 - zeroCount) / 100;
+
+        this._relativeWidths = percentages.map(function(percentage) {
+          // Make the width at least one percent so that the proportion becomes visible.
+          return (percentage === 0)? 1 : Math.floor(resizeFactor * percentage);
+        });
+      },
+
+      /** Builds captions for the proportions. */
+      _buildCaptions: function(proportions, percentages, captions) {
+        if (captions === "absolute")
+          this._captions = proportions;
+        else if (captions === "relative")
+          this._captions = percentages.map(function(percentage) {
+            return percentage + "%";
+          });
+        else {
+          var captionItems = JSON.parse(captions);
+          this._captions = this._resolveVariables(captionItems, proportions, percentages);
+        }
+      },
+
+      /** Resolves variables referring to absolute and relative proportions within the captions. */
+      _resolveVariables: function(captions, proportions, percentages) {
+        return captions.map(function(value, i) {
+          return value.replace("?x", proportions[i]).replace("?%", percentages[i] + "%");
+        }.bind(this));
+      },
+
+      /** Styles the proportion at index. */
+      _getStyle: function(index) {
+        var style = "width: " + this._relativeWidths[index] + "%;";
+        if (this.colors)
+          style += "background: " + this._getColor(index) + ";";
+        if (this.border)
+          style += this._getBorder(index);
+        return style;
+      },
+
+      /** Associates the proportion at index with its color. */
+      _getColor: function(index) {
+        return this.colors[index % this.colors.length];
+      },
+
+      /**
+       * Draws a border around the proportion at index,
+       * if the according property is set.
+       */
+      _getBorder: function(index) {
+        var style = "border: solid; border-width: thin;";
+        if (index > 0)
+          style += "border-left: none;";
+        return style;
+      },
+
+      /** Determines if the proportion at index has a url associated with it. */
+      _hasUrl: function(index) {
+        if (this.links)
+          return index < this.links.length;
+        else
+          return false;
+      },
+
+      /** Gets the url for the proportion at index. */
+      _getUrl: function(index) {
+        return this.links[index];
+      },
+
+      /** Associates the proportion at index with its description. */
+      _getCaption: function(index) {
+        if (index < this._captions.length)
+          return this._captions[index];
+        else
+          return "";
+      },
+    });
+  </script>
+</dom-module>
