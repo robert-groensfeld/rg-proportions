@@ -3,11 +3,12 @@
 Displays proportions as a 
 [bar](https://robert-groensfeld.github.io/rg-proportions/bower_components/rg-proportions/).
 
-## Install the Polymer-CLI
+## Prerequisites
 
-First, make sure you have the
-[Polymer CLI](https://www.npmjs.com/package/polymer-cli) 
-installed. Then run `polymer serve` to serve your element locally.
+1. Install [Polymer CLI](https://www.npmjs.com/package/polymer-cli)
+2. Run `polymer install` to install all dependencies if this component is not
+   part of an 
+   [app](https://www.polymer-project.org/1.0/toolbox/templates#application)
 
 ## Viewing Your Element
 
