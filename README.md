@@ -1,6 +1,7 @@
 # \<rg-proportions\>
 
-Displays proportions as a bar.
+Displays proportions as a 
+[bar](https://robert-groensfeld.github.io/rg-proportions/bower_components/rg-proportions/).
 
 ## Install the Polymer-CLI
 
